@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio — Générateur</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080B10;--surf:#0E1219;--surf2:#141923;--surf3:#1A2233;
+  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.13);
+  --violet:#7C3AED;--violet2:#9F67FF;
+  --cyan:#00FFE0;--cyan2:#00C4AF;
+  --t:#F0F4FF;--t2:#8896AA;--t3:#4A5568;
+  --gold:#FFD166;--red:#FF4D6A;--green:#00D68F;
+  --fc:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;
+  --glow:0 0 40px rgba(124,58,237,.2);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,58,237,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(124,58,237,.12);top:-150px;left:-150px}
+.orb2{width:350px;height:350px;background:rgba(0,255,224,.07);bottom:-80px;right:-80px}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;background:rgba(8,11,16,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--bd)}
+.nav-logo{font-family:var(--fc);font-size:18px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--t)}
+.nav-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--violet),var(--cyan2));border-radius:8px;display:grid;place-items:center;font-size:16px}
+.nav-logo span{color:var(--t2);font-weight:400}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-user{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--t2)}
+.nav-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--cyan2));display:grid;place-items:center;font-family:var(--fc);font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.nav-name{font-family:var(--fc);font-size:13px;font-weight:600;color:var(--t)}
+.btn-logout{padding:7px 14px;background:transparent;border:1.5px solid var(--bd2);border-radius:8px;color:var(--t3);font-family:var(--fc);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* ── LAYOUT ── */
+.page{position:relative;z-index:1;padding:80px 24px 60px;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+
+/* ── PAGE HEADER ── */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.page-title{font-family:var(--fc);font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.3px}
+.page-title em{font-style:normal;background:linear-gradient(90deg,var(--violet2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-sub{font-size:13px;color:var(--t2);margin-top:4px}
+.stat-pills{display:flex;gap:10px;flex-wrap:wrap}
+.stat-pill{padding:7px 14px;border-radius:100px;background:var(--surf2);border:1px solid var(--bd);font-family:var(--fc);font-size:11px;color:var(--t2);display:flex;align-items:center;gap:6px}
+.stat-pill strong{color:var(--t)}
+
+/* ── STUDIO CARD ── */
+.studio{background:var(--surf);border:1px solid var(--bd);border-radius:24px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.studio-inner{display:grid;grid-template-columns:1fr 300px;min-height:520px}
+
+/* LEFT */
+.panel-left{padding:32px;border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:24px}
+.field-label{font-family:var(--fc);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.field-label::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* URL */
+.url-wrap{position:relative}
+.url-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;color:var(--t3)}
+.url-input{width:100%;background:var(--surf2);border:1.5px solid var(--bd);border-radius:12px;padding:14px 44px 14px 42px;color:var(--t);font-family:var(--fb);font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.url-input::placeholder{color:var(--t3)}
+.url-input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.url-input.valid{border-color:var(--cyan2)}
+.url-clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;display:none;padding:2px;line-height:1}
+.url-clear.show{display:block}
+
+/* Presets */
+.preset-row{display:flex;gap:8px;flex-wrap:wrap}
+.preset-btn{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;border:1.5px solid var(--bd);background:transparent;color:var(--t2);font-family:var(--fc);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s}
+.preset-btn:hover{border-color:var(--bd2);color:var(--t);background:rgba(255,255,255,.03)}
+.preset-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(255,255,255,.15);flex-shrink:0}
+
+/* Custom grid */
+.custom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field-group{}
+select{width:100%;background:var(--surf2);border:1.5px solid var(--bd);border-radius:10px;padding:11px 14px;color:var(--t);font-family:var(--fb);font-size:13px;outline:none;transition:border-color .2s;cursor:pointer;appearance:none}
+select:focus{border-color:var(--violet)}
+.color-row{display:flex;align-items:center;gap:10px}
+.color-swatch{width:42px;height:42px;border-radius:10px;border:1.5px solid var(--bd2);cursor:pointer;overflow:hidden;position:relative;flex-shrink:0}
+.color-swatch input[type=color]{position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);opacity:0;cursor:pointer}
+.color-val{font-family:'Space Grotesk',monospace;font-size:12px;color:var(--t2);background:var(--surf2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 10px;flex:1;letter-spacing:.04em}
+.ec-pills{display:flex;gap:6px}
+.ec-pill{padding:7px 12px;border-radius:8px;border:1.5px solid var(--bd);background:transparent;color:var(--t2);font-family:var(--fc);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .18s}
+.ec-pill:hover{border-color:var(--violet2);color:var(--violet2)}
+.ec-pill.active{border-color:var(--violet);background:rgba(124,58,237,.15);color:var(--violet2)}
+
+/* RIGHT */
+.panel-right{padding:28px 24px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:20px;background:var(--surf2)}
+.qr-stage{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+.qr-frame{position:relative;padding:18px;background:#fff;border-radius:14px;box-shadow:0 0 0 1px rgba(255,255,255,.05),0 20px 50px rgba(0,0,0,.5);transition:all .3s}
+.qr-frame.pulse{animation:qrPulse .45s ease-out}
+@keyframes qrPulse{0%{transform:scale(.9);opacity:.4}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+#qr-canvas{display:block}
+.qr-empty{width:200px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:2px dashed rgba(255,255,255,.06);border-radius:12px;color:var(--t3);text-align:center}
+.qr-empty-icon{font-size:36px;opacity:.25}
+.qr-empty-text{font-size:11px;font-family:var(--fc);letter-spacing:.04em;line-height:1.5}
+.qr-info{width:100%;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:10px;font-family:var(--fc);font-size:10px;color:var(--t3);text-align:center;letter-spacing:.03em;line-height:1.5}
+.qr-info span{color:var(--cyan)}
+.action-stack{display:flex;flex-direction:column;gap:8px;width:100%}
+.btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,var(--violet),#5B21B6);color:#fff;border:none;border-radius:11px;font-family:var(--fc);font-size:13px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:all .22s;box-shadow:0 4px 20px rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(124,58,237,.45)}
+.btn-primary:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.btn-secondary{width:100%;padding:10px;background:transparent;color:var(--t2);border:1.5px solid var(--bd2);border-radius:11px;font-family:var(--fc);font-size:12px;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-secondary:hover{border-color:var(--cyan2);color:var(--cyan);background:rgba(0,255,224,.04)}
+.btn-secondary:disabled{opacity:.25;cursor:not-allowed}
+
+/* STUDIO FOOTER */
+.studio-footer{padding:14px 32px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.01)}
+.sf-left{font-size:11px;color:var(--t3);font-family:var(--fc);letter-spacing:.04em}
+.sf-right{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);font-family:var(--fc)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:background .3s,box-shadow .3s}
+.status-dot.active{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+
+/* ── HISTORY ── */
+.history-section{}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.section-title{font-family:var(--fc);font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.section-badge{font-family:var(--fc);font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(124,58,237,.15);color:var(--violet2);border:1px solid rgba(124,58,237,.25)}
+.btn-clear-all{padding:7px 14px;background:transparent;border:1.5px solid rgba(255,77,106,.2);border-radius:8px;color:var(--red);font-family:var(--fc);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.btn-clear-all:hover{background:rgba(255,77,106,.08);border-color:var(--red)}
+
+/* History empty */
+.history-empty{padding:60px 20px;text-align:center;color:var(--t3);background:var(--surf);border:1px solid var(--bd);border-radius:20px}
+.history-empty-icon{font-size:48px;opacity:.2;margin-bottom:12px}
+.history-empty-text{font-family:var(--fc);font-size:14px;letter-spacing:.04em}
+.history-empty-sub{font-size:12px;margin-top:6px;opacity:.6}
+
+/* History grid */
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.hist-card{background:var(--surf);border:1px solid var(--bd);border-radius:16px;overflow:hidden;transition:all .3s;cursor:pointer;position:relative;group:true}
+.hist-card:hover{border-color:var(--bd2);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.hist-card-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--surf2)}
+.hist-card-img canvas{border-radius:8px;max-width:100%;height:auto !important}
+.hist-card-body{padding:14px 16px;border-top:1px solid var(--bd)}
+.hist-card-url{font-size:12px;font-weight:500;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.hist-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hist-card-date{font-family:var(--fc);font-size:10px;color:var(--t3);letter-spacing:.03em}
+.hist-card-actions{display:flex;gap:6px;opacity:0;transition:opacity .2s}
+.hist-card:hover .hist-card-actions{opacity:1}
+.hist-action{width:28px;height:28px;border-radius:7px;border:1.5px solid var(--bd2);background:var(--surf3);color:var(--t2);font-size:12px;display:grid;place-items:center;cursor:pointer;transition:all .18s}
+.hist-action:hover{border-color:var(--cyan2);color:var(--cyan)}
+.hist-action.del:hover{border-color:var(--red);color:var(--red)}
+.hist-card-theme{display:flex;align-items:center;gap:5px;margin-top:4px}
+.hist-swatch{width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.1)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surf);border:1px solid var(--bd2);border-radius:100px;padding:11px 22px;font-family:var(--fc);font-size:12px;font-weight:500;color:var(--t);display:flex;align-items:center;gap:9px;box-shadow:0 8px 32px rgba(0,0,0,.4);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0;z-index:9999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* LIGHTBOX */
+#lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:20px}
+#lightbox.open{display:flex}
+#lb-img{max-width:min(500px,90vw);max-height:80vh;border-radius:16px;box-shadow:0 0 80px rgba(0,255,224,.1);object-fit:contain}
+#lb-info{font-family:var(--fc);font-size:12px;color:rgba(255,255,255,.5);text-align:center;letter-spacing:.04em}
+.lb-close{position:fixed;top:20px;right:24px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px;display:grid;place-items:center}
+.lb-dl{padding:10px 22px;background:linear-gradient(135deg,var(--violet),#5B21B6);color:#fff;border:none;border-radius:100px;font-family:var(--fc);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.lb-dl:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.4)}
+
+/* RESPONSIVE */
+@media(max-width:900px){.studio-inner{grid-template-columns:1fr}.panel-left{border-right:none;border-bottom:1px solid var(--bd)}.custom-grid{grid-template-columns:1fr}.history-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
+@media(max-width:600px){nav{padding:0 16px}.page{padding:76px 16px 40px;gap:28px}.panel-left{padding:20px}.panel-right{padding:20px 16px}.studio-footer{padding:12px 20px;flex-direction:column;gap:6px}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="app.html" class="nav-logo">
+    <div class="nav-logo-icon">▦</div>
+    QR <span>Studio</span>
+  </a>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="nav-avatar" id="navAvatar">?</div>
+      <div class="nav-name" id="navName">—</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Mon <em>Studio QR</em></div>
+      <div class="page-sub">Générez, personnalisez et retrouvez tous vos QR codes</div>
+    </div>
+    <div class="stat-pills">
+      <div class="stat-pill">▦ <strong id="statTotal">0</strong> générés</div>
+      <div class="stat-pill">🕐 Dernier : <strong id="statLast">—</strong></div>
+    </div>
+  </div>
+
+  <!-- STUDIO -->
+  <div class="studio">
+    <div class="studio-inner">
+
+      <!-- LEFT: Controls -->
+      <div class="panel-left">
+        <div>
+          <div class="field-label">Votre lien ou texte</div>
+          <div class="url-wrap">
+            <span class="url-icon">🔗</span>
+            <input class="url-input" id="urlInput" type="text" placeholder="https://votre-lien.com ou n'importe quel texte…" autocomplete="off" spellcheck="false">
+            <button class="url-clear" id="urlClear" onclick="clearUrl()">✕</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="field-label">Thèmes rapides</div>
+          <div class="preset-row">
+            <button class="preset-btn" onclick="applyPreset('#000000','#ffffff','Classique')"><div class="preset-dot" style="background:#000"></div>Classique</button>
+            <button class="preset-btn" onclick="applyPreset('#7C3AED','#F5F0FF','Violet')"><div class="preset-dot" style="background:#7C3AED"></div>Violet</button>
+            <button class="preset-btn" onclick="applyPreset('#0A0E1A','#00FFE0','Cyber')"><div class="preset-dot" style="background:#00FFE0"></div>Cyber</button>
+            <button class="preset-btn" onclick="applyPreset('#1a1a2e','#FFD166','Or')"><div class="preset-dot" style="background:#FFD166"></div>Or</button>
+            <button class="preset-btn" onclick="applyPreset('#0D1B2A','#FF6B8A','Rose')"><div class="preset-dot" style="background:#FF6B8A"></div>Rose</button>
+          </div>
+        </div>
+
+        <div class="custom-grid">
+          <div class="field-group">
+            <div class="field-label">Couleur QR</div>
+            <div class="color-row">
+              <div class="color-swatch" id="swFg" style="background:#000">
+                <input type="color" id="colorFg" value="#000000">
+              </div>
+              <div class="color-val" id="valFg">#000000</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Fond</div>
+            <div class="color-row">
+              <div class="color-swatch" id="swBg" style="background:#fff">
+                <input type="color" id="colorBg" value="#ffffff">
+              </div>
+              <div class="color-val" id="valBg">#ffffff</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Taille export</div>
+            <select id="sizeSelect">
+              <option value="180">180 × 180 px</option>
+              <option value="220" selected>220 × 220 px</option>
+              <option value="280">280 × 280 px</option>
+              <option value="360">360 × 360 px</option>
+              <option value="512">512 × 512 px</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Correction</div>
+            <div class="ec-pills">
+              <button class="ec-pill active" data-ec="L">L</button>
+              <button class="ec-pill" data-ec="M">M</button>
+              <button class="ec-pill" data-ec="Q">Q</button>
+              <button class="ec-pill" data-ec="H">H</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Preview -->
+      <div class="panel-right">
+        <div class="qr-stage">
+          <div class="qr-frame" id="qrFrame">
+            <div class="qr-empty" id="qrEmpty">
+              <div class="qr-empty-icon">▦</div>
+              <div class="qr-empty-text">Collez un lien<br>pour générer</div>
+            </div>
+            <div id="qr-canvas" style="display:none"></div>
+          </div>
+        </div>
+
+        <div class="qr-info" id="qrInfo">Aucun QR code généré</div>
+
+        <div class="action-stack">
+          <button class="btn-primary" id="btnDownload" disabled onclick="downloadQR()">⬇ Télécharger PNG</button>
+          <button class="btn-secondary" id="btnCopy" disabled onclick="copyQR()">⧉ Copier l'image</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="studio-footer">
+      <div class="sf-left">100% local · aucune donnée envoyée</div>
+      <div class="sf-right">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">En attente</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section">
+    <div class="section-header">
+      <div class="section-title">
+        Historique
+        <span class="section-badge" id="histBadge">0</span>
+      </div>
+      <button class="btn-clear-all" onclick="clearHistory()">🗑 Tout effacer</button>
+    </div>
+    <div id="histContainer"></div>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button class="lb-close" onclick="closeLb()">✕</button>
+  <img id="lb-img" src="" alt="QR Code">
+  <div id="lb-info"></div>
+  <button class="lb-dl" onclick="lbDownload()">⬇ Télécharger ce QR code</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg"></span></div>
+
+<script>
+// ── SESSION ──
+const session = JSON.parse(localStorage.getItem('qrs_session') || 'null');
+if (!session) { window.location.href = 'index.html'; }
+else {
+  document.getElementById('navName').textContent = session.name;
+  document.getElementById('navAvatar').textContent = session.name.charAt(0).toUpperCase();
+}
+function logout() {
+  localStorage.removeItem('qrs_session');
+  window.location.href = 'index.html';
+}
+
+// ── STATE ──
+let currentUrl = '';
+let ecLevel = 'L';
+let debounceTimer = null;
+let lbCurrentData = null;
+
+const urlInput  = document.getElementById('urlInput');
+const urlClear  = document.getElementById('urlClear');
+const qrCanvas  = document.getElementById('qr-canvas');
+const qrEmpty   = document.getElementById('qrEmpty');
+const qrFrame   = document.getElementById('qrFrame');
+const qrInfo    = document.getElementById('qrInfo');
+const btnDl     = document.getElementById('btnDownload');
+const btnCopy   = document.getElementById('btnCopy');
+const statusDot = document.getElementById('statusDot');
+const statusTxt = document.getElementById('statusText');
+const colorFg   = document.getElementById('colorFg');
+const colorBg   = document.getElementById('colorBg');
+
+// ── GENERATE ──
+function generateQR() {
+  const url = urlInput.value.trim();
+  if (!url) { resetState(); return; }
+  const fg = colorFg.value;
+  const bg = colorBg.value;
+
+  qrCanvas.innerHTML = '';
+  qrCanvas.style.display = 'block';
+  qrEmpty.style.display = 'none';
+
+  try {
+    new QRCode(qrCanvas, {
+      text: url,
+      width: 200, height: 200,
+      colorDark: fg,
+      colorLight: bg,
+      correctLevel: QRCode.CorrectLevel[ecLevel]
+    });
+    currentUrl = url;
+    qrFrame.style.background = bg;
+    qrFrame.classList.remove('pulse');
+    void qrFrame.offsetWidth;
+    qrFrame.classList.add('pulse');
+    const short = url.length > 38 ? url.slice(0,35)+'…' : url;
+    qrInfo.innerHTML = `<span>✓ Prêt</span> · ${short}`;
+    btnDl.disabled = false;
+    btnCopy.disabled = false;
+    statusDot.classList.add('active');
+    statusTxt.textContent = 'QR code prêt';
+    urlInput.classList.add('valid');
+    urlClear.classList.add('show');
+  } catch(e) {
+    resetState();
+    showToast('❌','Contenu invalide');
+  }
+}
+
+function resetState() {
+  qrCanvas.style.display = 'none';
+  qrEmpty.style.display = 'flex';
+  qrFrame.style.background = '#fff';
+  qrInfo.textContent = 'Aucun QR code généré';
+  btnDl.disabled = true;
+  btnCopy.disabled = true;
+  statusDot.classList.remove('active');
+  statusTxt.textContent = 'En attente';
+  urlInput.classList.remove('valid');
+  urlClear.classList.remove('show');
+  currentUrl = '';
+}
+
+function clearUrl() {
+  urlInput.value = '';
+  resetState();
+  urlInput.focus();
+}
+
+// ── INPUT EVENTS ──
+urlInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  if (!urlInput.value.trim()) { resetState(); return; }
+  urlClear.classList.toggle('show', urlInput.value.length > 0);
+  debounceTimer = setTimeout(generateQR, 350);
+});
+urlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { clearTimeout(debounceTimer); generateQR(); }
+});
+
+// ── COLORS ──
+colorFg.addEventListener('input', () => {
+  document.getElementById('swFg').style.background = colorFg.value;
+  document.getElementById('valFg').textContent = colorFg.value.toUpperCase();
+  if (currentUrl) generateQR();
+});
+colorBg.addEventListener('input', () => {
+  document.getElementById('swBg').style.background = colorBg.value;
+  document.getElementById('valBg').textContent = colorBg.value.toUpperCase();
+  if (currentUrl) generateQR();
+});
+document.getElementById('sizeSelect').addEventListener('change', () => { if(currentUrl) generateQR(); });
+
+// ── EC PILLS ──
+document.querySelectorAll('.ec-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ec-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ecLevel = btn.dataset.ec;
+    if (currentUrl) generateQR();
+  });
+});
+
+// ── PRESETS ──
+function applyPreset(fg, bg, name) {
+  colorFg.value = fg; colorBg.value = bg;
+  document.getElementById('swFg').style.background = fg;
+  document.getElementById('swBg').style.background = bg;
+  document.getElementById('valFg').textContent = fg.toUpperCase();
+  document.getElementById('valBg').textContent = bg.toUpperCase();
+  if (currentUrl) generateQR();
+  else { urlInput.focus(); showToast('🎨','Thème "'+name+'" appliqué !'); }
+}
+
+// ── GET CANVAS ──
+function getQrCanvas() { return qrCanvas.querySelector('canvas'); }
+
+// ── DOWNLOAD ──
+function downloadQR(customCanvas, customUrl) {
+  const c = customCanvas || getQrCanvas();
+  if (!c) return;
+  const size = parseInt(document.getElementById('sizeSelect').value);
+  const bg = colorBg.value;
+  const off = document.createElement('canvas');
+  off.width = size; off.height = size;
+  const ctx = off.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,size,size);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(c, 0,0,size,size);
+  const a = document.createElement('a');
+  a.href = off.toDataURL('image/png');
+  const u = customUrl || currentUrl;
+  let domain = 'qrcode';
+  try { domain = new URL(u.startsWith('http')?u:'https://'+u).hostname.replace('www.','').split('.')[0]; } catch(e){}
+  a.download = `qr-${domain}-${size}px.png`;
+  a.click();
+  showToast('⬇',`Téléchargé (${size}×${size}px)`);
+}
+
+// ── COPY ──
+async function copyQR() {
+  const c = getQrCanvas();
+  if (!c) return;
+  try {
+    c.toBlob(async blob => {
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      showToast('⧉','Image copiée !');
+    });
+  } catch(e) { showToast('⚠','Copie non supportée ici'); }
+}
+
+// ── SAVE TO HISTORY ──
+function saveToHistory() {
+  if (!currentUrl) return;
+  const c = getQrCanvas();
+  if (!c) return;
+  const img = c.toDataURL('image/png');
+  const history = getHistory();
+  // Avoid duplicate consecutive
+  if (history.length && history[0].url === currentUrl && history[0].fg === colorFg.value && history[0].bg === colorBg.value) return;
+  history.unshift({
+    id: Date.now(),
+    url: currentUrl,
+    img,
+    fg: colorFg.value,
+    bg: colorBg.value,
+    ec: ecLevel,
+    size: document.getElementById('sizeSelect').value,
+    date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
+  });
+  // Keep max 20
+  const trimmed = history.slice(0,20);
+  const key = 'qrs_history_' + session.email;
+  localStorage.setItem(key, JSON.stringify(trimmed));
+  renderHistory();
+  showToast('📋','Ajouté à l\'historique');
+}
+
+// ── HISTORY DATA ──
+function getHistory() {
+  const key = 'qrs_history_' + session.email;
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function clearHistory() {
+  if (!confirm('Effacer tout l\'historique ?')) return;
+  localStorage.removeItem('qrs_history_' + session.email);
+  renderHistory();
+  showToast('🗑','Historique effacé');
+}
+
+// ── RENDER HISTORY ──
+function renderHistory() {
+  const hist = getHistory();
+  const container = document.getElementById('histContainer');
+  document.getElementById('histBadge').textContent = hist.length;
+  document.getElementById('statTotal').textContent = hist.length;
+  document.getElementById('statLast').textContent = hist.length ? hist[0].date : '—';
+
+  if (!hist.length) {
+    container.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">📋</div>
+        <div class="history-empty-text">Aucun QR code dans l'historique</div>
+        <div class="history-empty-sub">Générez un QR code et cliquez sur "Enregistrer" pour le retrouver ici</div>
+      </div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'history-grid';
+
+  hist.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'hist-card';
+    card.innerHTML = `
+      <div class="hist-card-img">
+        <img src="${item.img}" alt="QR" style="width:140px;height:140px;border-radius:8px;display:block">
+      </div>
+      <div class="hist-card-body">
+        <div class="hist-card-url" title="${item.url}">${item.url}</div>
+        <div class="hist-card-theme">
+          <div class="hist-swatch" style="background:${item.fg}"></div>
+          <div class="hist-swatch" style="background:${item.bg};border-color:rgba(255,255,255,.2)"></div>
+          <span style="font-size:10px;color:var(--t3);font-family:var(--fc);margin-left:2px">EC:${item.ec} · ${item.size}px</span>
+        </div>
+        <div class="hist-card-meta">
+          <div class="hist-card-date">${item.date}</div>
+          <div class="hist-card-actions">
+            <button class="hist-action" title="Voir" onclick="event.stopPropagation();openLb('${item.id}')">🔍</button>
+            <button class="hist-action" title="Télécharger" onclick="event.stopPropagation();downloadFromHist('${item.id}')">⬇</button>
+            <button class="hist-action del" title="Supprimer" onclick="event.stopPropagation();deleteHist('${item.id}')">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    card.addEventListener('click', () => openLb(item.id));
+    grid.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
+// ── LIGHTBOX ──
+function openLb(id) {
+  const hist = getHistory();
+  const item = hist.find(h => h.id == id);
+  if (!item) return;
+  lbCurrentData = item;
+  document.getElementById('lb-img').src = item.img;
+  document.getElementById('lb-info').textContent = item.url + ' · ' + item.date;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLb() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function lbDownload() {
+  if (!lbCurrentData) return;
+  const a = document.createElement('a');
+  a.href = lbCurrentData.img;
+  let domain = 'qrcode';
+  try { domain = new URL(lbCurrentData.url.startsWith('http')?lbCurrentData.url:'https://'+lbCurrentData.url).hostname.replace('www.','').split('.')[0]; } catch(e){}
+  a.download = `qr-${domain}.png`;
+  a.click();
+  showToast('⬇','Téléchargé !');
+}
+document.getElementById('lightbox').addEventListener('click', e => { if(e.target.id==='lightbox') closeLb(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeLb(); });
+
+// ── DELETE HIST ITEM ──
+function deleteHist(id) {
+  const key = 'qrs_history_' + session.email;
+  let hist = getHistory().filter(h => h.id != id);
+  localStorage.setItem(key, JSON.stringify(hist));
+  renderHistory();
+  showToast('🗑','Supprimé');
+}
+
+// ── DOWNLOAD FROM HIST ──
+function downloadFromHist(id) {
+  const item = getHistory().find(h => h.id == id);
+  if (!item) return;
+  const a = document.createElement('a');
+  a.href = item.img;
+  let domain = 'qrcode';
+  try { domain = new URL(item.url.startsWith('http')?item.url:'https://'+item.url).hostname.replace('www.','').split('.')[0]; } catch(e){}
+  a.download = `qr-${domain}.png`;
+  a.click();
+  showToast('⬇','Téléchargé !');
+}
+
+// ── SAVE BUTTON — add to primary button ──
+// Override download to also save
+const origDownload = downloadQR;
+document.getElementById('btnDownload').onclick = () => {
+  origDownload();
+  setTimeout(saveToHistory, 300);
+};
+
+// Also save on copy
+const origCopy = copyQR;
+document.getElementById('btnCopy').onclick = async () => {
+  await origCopy();
+  setTimeout(saveToHistory, 300);
+};
+
+// ── TOAST ──
+function showToast(icon, msg) {
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+renderHistory();
+</script>
+</body>
+</html>
